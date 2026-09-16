@@ -303,6 +303,10 @@
         }
         .toast-notification.show { transform: translateX(0); }
 
+        /* Custom Order Fallback Box inside TikTok */
+        .tiktok-fallback-box { background: #fffdf0; border: 2px solid var(--gold); padding: 16px; border-radius: var(--radius-md); margin-top: 15px; display: none; text-align: center; }
+        .tiktok-fallback-box textarea { width: 100%; font-size: 0.8rem; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 8px; resize: none; background: #fff; }
+
         /* Mobile Breakpoints */
         @media (max-width: 768px) {
             body { padding-bottom: 100px; }
@@ -652,7 +656,7 @@
                 <h3>Connect With Us</h3>
                 <p>Stay updated with our latest vlogs, recipes, and special offers!</p>
                 <div class="social-links-grid">
-                    <button onclick="openWhatsAppDirect('923299713507', 'Hi! I want to contact Nano Desi Foods')" class="social-link-btn">
+                    <button onclick="openWhatsAppDirect('Hi! I want to contact Nano Desi Foods')" class="social-link-btn">
                         💬 Official WhatsApp Channel
                     </button>
                     <a href="https://www.youtube.com" target="_blank" class="social-link-btn">
@@ -665,7 +669,7 @@
 
     <!-- Floating Buttons -->
     <div class="floating-btn-group">
-        <div class="floating-wa-btn" title="Chat on WhatsApp" onclick="openWhatsAppDirect('923299713507', 'Hi! I have a question about Nano Desi Foods')">
+        <div class="floating-wa-btn" title="Chat on WhatsApp" onclick="openWhatsAppDirect('Hi! I have a question about Nano Desi Foods')">
             💬
         </div>
         <div class="floating-cart-btn" onclick="openCartModal()" title="View Shopping Cart">
@@ -676,7 +680,7 @@
 
     <!-- Mobile Action Bar -->
     <div class="mobile-action-bar">
-        <button onclick="openWhatsAppDirect('923299713507', 'Hi! I want to order from Nano Desi Foods')" class="action-btn action-wa">
+        <button onclick="openWhatsAppDirect('Hi! I want to order from Nano Desi Foods')" class="action-btn action-wa">
             💬 WhatsApp Order
         </button>
         <button onclick="openMessageModal()" class="action-btn action-msg">
@@ -837,7 +841,14 @@
                 <input type="text" id="cTid" placeholder="Enter advance payment transaction ID">
             </div>
 
-            <button class="submit-btn" onclick="processOrder()">Complete Order on WhatsApp</button>
+            <!-- TikTok Safe Fallback Box Inside Modal -->
+            <div class="tiktok-fallback-box" id="tiktokFallbackBox">
+                <p style="font-weight: 800; font-size: 0.82rem; color: #8a6d3b; margin-bottom: 6px;">⚠️ Agar WhatsApp na khule, toh yeh message copy karein aur WhatsApp par bhej dein:</p>
+                <textarea id="fallbackMsgText" rows="3" readonly></textarea>
+                <button class="copy-btn" onclick="copyFallbackMessage()" style="width:150px;">📋 Copy Message</button>
+            </div>
+
+            <button class="submit-btn" onclick="processOrder()" style="margin-top: 12px;">Complete Order on WhatsApp</button>
         </div>
     </div>
 
@@ -875,17 +886,31 @@
         let currentCustomItem = null;
         let selectedStarsCount = 5;
 
-        // TikTok Browser Compatible Universal Direct WhatsApp Navigation
-        function openWhatsAppDirect(phone, text) {
+        // TikTok Browser Bulletproof WhatsApp Safe Opener
+        function openWhatsAppDirect(text) {
+            const cleanPhone = "923299713507";
             const encodedText = encodeURIComponent(text);
-            const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`;
+            const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
 
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).catch(() => {});
-            }
-
-            // Direct location redirect fixes TikTok browser shortlink block
+            // Try opening via standard window location
             window.location.href = waUrl;
+
+            // Fallback for strict in-app browsers: Show text copy box inside modal
+            setTimeout(() => {
+                const box = document.getElementById("tiktokFallbackBox");
+                const textArea = document.getElementById("fallbackMsgText");
+                if (box && textArea) {
+                    textArea.value = text;
+                    box.style.display = "block";
+                }
+            }, 800);
+        }
+
+        function copyFallbackMessage() {
+            const textArea = document.getElementById("fallbackMsgText");
+            textArea.select();
+            document.execCommand("copy");
+            showToast("Message copied! Paste it in WhatsApp chat.", "📋");
         }
 
         // Initialize App
@@ -1055,6 +1080,7 @@
         function openCartModal() {
             const listContainer = document.getElementById("modalCartList");
             listContainer.innerHTML = "";
+            document.getElementById("tiktokFallbackBox").style.display = "none";
 
             if (cart.length === 0) {
                 listContainer.innerHTML = "<p style='text-align:center; padding:15px; color:#777;'>Cart is empty!</p>";
@@ -1215,9 +1241,9 @@
                 return;
             }
 
-            let msg = `*INQUIRY - NANO DESI FOODS*\n\n👤 *Name:* ${name}\n💬 *Message:* ${text}`;
+            let msg = `INQUIRY - NANO DESI FOODS\n\nName: ${name}\nMessage: ${text}`;
             closeMessageModal();
-            openWhatsAppDirect("923299713507", msg);
+            openWhatsAppDirect(msg);
         }
 
         // Process Order Function
@@ -1243,7 +1269,7 @@
             cart.forEach((item, index) => {
                 const itemW = (item.weight || 1) * item.qty;
                 totalWeight += itemW;
-                itemDetails += `${index + 1}. ${item.name} (${item.weight || 1} KG x ${item.qty}) - Rs. ${(item.price * item.qty).toLocaleString()}\n`;
+                itemDetails += `${index + 1}. ${item.name} (${item.weight || 1}KG x ${item.qty}) - Rs. ${(item.price * item.qty).toLocaleString()}\n`;
             });
 
             let itemsSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -1253,22 +1279,21 @@
             }
             const grandTotal = itemsSubtotal + deliveryFee;
 
-            let waMessage = `*NEW ORDER - NANO DESI FOODS*\n\n`;
-            waMessage += `*Customer Details:*\n`;
-            waMessage += `👤 Name: ${name}\n`;
-            waMessage += `📞 Phone: ${phone}\n`;
-            waMessage += `🏙️ City: ${city}\n`;
-            waMessage += `🏠 Address: ${address}\n\n`;
-            waMessage += `*Order Items:*\n${itemDetails}\n`;
-            waMessage += `*Total Weight:* ${totalWeight} KG\n`;
-            waMessage += `*Items Subtotal:* Rs. ${itemsSubtotal.toLocaleString()}\n`;
-            waMessage += `*Delivery Charges:* Rs. ${deliveryFee.toLocaleString()}\n`;
-            waMessage += `*Grand Total Payable:* Rs. ${grandTotal.toLocaleString()}\n\n`;
-            waMessage += `💳 *Transaction ID (TID):* ${tid}\n\n`;
+            let waMessage = `NEW ORDER - NANO DESI FOODS\n\n`;
+            waMessage += `Customer Details:\n`;
+            waMessage += `Name: ${name}\n`;
+            waMessage += `Phone: ${phone}\n`;
+            waMessage += `City: ${city}\n`;
+            waMessage += `Address: ${address}\n\n`;
+            waMessage += `Order Items:\n${itemDetails}\n`;
+            waMessage += `Total Weight: ${totalWeight} KG\n`;
+            waMessage += `Items Subtotal: Rs. ${itemsSubtotal.toLocaleString()}\n`;
+            waMessage += `Delivery Charges: Rs. ${deliveryFee.toLocaleString()}\n`;
+            waMessage += `Grand Total: Rs. ${grandTotal.toLocaleString()}\n\n`;
+            waMessage += `Transaction ID (TID): ${tid}\n\n`;
             waMessage += `Please confirm my order!`;
 
-            closeModal();
-            openWhatsAppDirect("923299713507", waMessage);
+            openWhatsAppDirect(waMessage);
         }
 
         // Utility Functions
