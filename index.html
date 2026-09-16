@@ -875,27 +875,17 @@
         let currentCustomItem = null;
         let selectedStarsCount = 5;
 
-        // TikTok In-App Browser Direct WhatsApp Redirection
+        // TikTok Browser Compatible Universal Direct WhatsApp Navigation
         function openWhatsAppDirect(phone, text) {
             const encodedText = encodeURIComponent(text);
-            const waUrl = `https://wa.me/${phone}?text=${encodedText}`;
+            const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`;
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).catch(() => {});
             }
 
-            const link = document.createElement("a");
-            link.href = waUrl;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {
-                if (document.body.contains(link)) {
-                    document.body.removeChild(link);
-                }
-            }, 500);
+            // Direct location redirect fixes TikTok browser shortlink block
+            window.location.href = waUrl;
         }
 
         // Initialize App
