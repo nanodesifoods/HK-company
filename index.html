@@ -875,17 +875,19 @@
         let currentCustomItem = null;
         let selectedStarsCount = 5;
 
-        // Direct WhatsApp redirection
+        // Universal WhatsApp Redirection (Supports Android TikTok, Instagram & Mobile Browsers)
         function openWhatsAppDirect(phone, text) {
             const encodedText = encodeURIComponent(text);
-            const waUrl = `https://wa.me/${phone}?text=${encodedText}`;
-            
-            const link = document.createElement('a');
-            link.href = waUrl;
-            link.target = '_top';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isAndroid = /Android/i.test(ua);
+
+            if (isAndroid) {
+                // TikTok Android In-App Browser fix using native intent
+                window.location.href = `intent://send?phone=${phone}&text=${encodedText}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
+            } else {
+                // iOS / Desktop Browser fallback
+                window.location.href = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`;
+            }
         }
 
         // Initialize App
